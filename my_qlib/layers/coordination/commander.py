@@ -21,7 +21,7 @@ def run_strategy_commander(config):
                 start_time=cfg["start_time"],
                 end_time=cfg["end_time"],
                 strategy=cfg["strategy"],
-                provider_uri=cfg.get("provider_uri", "~/.qlib/qlib_data/cn_data")
+                provider_uri=cfg.get("provider_uri", "/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data")
             )
         }
     ]

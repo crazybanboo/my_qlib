@@ -1,7 +1,7 @@
 import qlib
 from qlib.config import REG_CN
 
-def init_qlib_env(provider_uri: str = "~/.qlib/qlib_data/cn_data"):
+def init_qlib_env(provider_uri: str = "/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data"):
     """
     初始化 Qlib 环境
     """

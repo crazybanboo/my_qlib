@@ -6,7 +6,7 @@ def standard_backtest_pipeline(
     start_time, 
     end_time, 
     strategy, 
-    provider_uri="~/.qlib/qlib_data/cn_data"
+    provider_uri="/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data"
 ):
     """
     标准回测流水线分子。

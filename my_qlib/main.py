@@ -1,33 +1,41 @@
 import sys
 import os
+import pandas as pd
 
 # 将当前目录加入路径，以便 import layers
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from layers.coordination.commander import run_strategy_commander
 from layers.atomic.strategy_pool import create_simple_strategy
-import pandas as pd
+from layers.atomic.config_loader import load_yaml_config
 
 def main():
-    # 模拟信号数据 (在实际应用中，这里可能是模型输出的信号)
-    # 信号格式通常为 index: [datetime, instrument], columns: [score]
-    # 简单起见，这里演示如何注入策略
-    
-    # 这里的 config 可以通过命令行参数解析 (argparse) 获取
-    config = {
-        "start_time": "2017-01-01",
-        "end_time": "2020-08-01",
-        "provider_uri": "~/.qlib/qlib_data/cn_data",
-        # 暂时提供一个空信号的占位，实际需要用户传入信号或模型
-        "strategy": None 
-    }
-
     print("=== Qlib 4层原子架构回测框架 ===")
     
-    # 用户可以在这里选择不同的策略
-    # 示例：创建一个 TopK 策略
-    # 注意：在没有真实信号的情况下，TopkDropoutStrategy 会报错，这里仅做展示
-    # config["strategy"] = create_simple_strategy(signal=pd.Series(...))
+    # 1. 从 YAML 加载基础配置
+    config_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    raw_config = load_yaml_config(config_path)
+    
+    # 2. 准备协调层所需的 config 格式
+    # 将 yaml 中的分层配置平铺或按需转换
+    backtest_cfg = raw_config.get("backtest", {})
+    strategy_cfg = raw_config.get("strategy", {})
+    
+    # 示例信号生成 (实际应由模型提供)
+    # 此处仅为演示如何将 YAML 配置与动态生成的策略对象结合
+    dummy_signal = pd.Series(dtype=float) 
+    
+    config = {
+        "start_time": backtest_cfg.get("start_time"),
+        "end_time": backtest_cfg.get("end_time"),
+        "provider_uri": backtest_cfg.get("provider_uri"),
+        # 使用 YAML 中的参数创建策略
+        "strategy": create_simple_strategy(
+            signal=dummy_signal, 
+            topk=strategy_cfg.get("kwargs", {}).get("topk", 50),
+            n_drop=strategy_cfg.get("kwargs", {}).get("n_drop", 5)
+        )
+    }
 
     try:
         results = run_strategy_commander(config)
