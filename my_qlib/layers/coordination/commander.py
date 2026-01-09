@@ -10,9 +10,9 @@ def run_strategy_commander(config):
     flow_table = [
         {
             "step": "validate_config",
-            "condition": lambda cfg: "start_time" in cfg and "end_time" in cfg and "strategy" in cfg,
+            "condition": lambda cfg: "start_time" in cfg and "end_time" in cfg and "strategy_kwargs" in cfg,
             "action": lambda cfg: print(f"配置验证通过: {cfg['start_time']} 到 {cfg['end_time']}"),
-            "on_fail": Exception("配置缺失关键字段 (start_time, end_time, strategy)")
+            "on_fail": Exception("配置缺失关键字段 (start_time, end_time, strategy_kwargs)")
         },
         {
             "step": "execute_backtest",
@@ -20,8 +20,10 @@ def run_strategy_commander(config):
             "action": lambda cfg: standard_backtest_pipeline(
                 start_time=cfg["start_time"],
                 end_time=cfg["end_time"],
-                strategy=cfg["strategy"],
-                provider_uri=cfg.get("provider_uri", "/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data")
+                strategy_kwargs=cfg["strategy_kwargs"],
+                provider_uri=cfg.get("provider_uri", "/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data"),
+                benchmark=cfg.get("benchmark", "SH000300"),
+                account=cfg.get("account", 100000000)
             )
         }
     ]

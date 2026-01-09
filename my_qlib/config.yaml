@@ -2,6 +2,8 @@ backtest:
   start_time: "2017-01-01"
   end_time: "2020-08-01"
   provider_uri: "/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data"
+  benchmark: "SH000300"
+  account: 100000000
 
 strategy:
   class: "TopkDropoutStrategy"

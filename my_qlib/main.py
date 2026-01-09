@@ -6,7 +6,6 @@ import pandas as pd
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from layers.coordination.commander import run_strategy_commander
-from layers.atomic.strategy_pool import create_simple_strategy
 from layers.atomic.config_loader import load_yaml_config
 
 def main():
@@ -21,20 +20,17 @@ def main():
     backtest_cfg = raw_config.get("backtest", {})
     strategy_cfg = raw_config.get("strategy", {})
     
-    # 示例信号生成 (实际应由模型提供)
-    # 此处仅为演示如何将 YAML 配置与动态生成的策略对象结合
-    dummy_signal = pd.Series(dtype=float) 
-    
     config = {
         "start_time": backtest_cfg.get("start_time"),
         "end_time": backtest_cfg.get("end_time"),
         "provider_uri": backtest_cfg.get("provider_uri"),
-        # 使用 YAML 中的参数创建策略
-        "strategy": create_simple_strategy(
-            signal=dummy_signal, 
-            topk=strategy_cfg.get("kwargs", {}).get("topk", 50),
-            n_drop=strategy_cfg.get("kwargs", {}).get("n_drop", 5)
-        )
+        "benchmark": backtest_cfg.get("benchmark", "SH000300"),
+        "account": backtest_cfg.get("account", 100000000),
+        # 传递参数而不是对象，由 L3 管道负责创建
+        "strategy_kwargs": {
+            "topk": strategy_cfg.get("kwargs", {}).get("topk", 50),
+            "n_drop": strategy_cfg.get("kwargs", {}).get("n_drop", 5)
+        }
     }
 
     try:
