@@ -1,3 +1,5 @@
 .venv
 *.gz
 *.zip
+*.pyc
+__pycache__/
