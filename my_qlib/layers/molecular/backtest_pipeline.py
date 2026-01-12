@@ -1,6 +1,6 @@
 from ..atomic.env_init import init_qlib_env
 from ..atomic.backtest_executor import create_simulator_executor, run_backtest
-from ..atomic.report_generator import analyze_risk, calculate_summary_stats
+from ..atomic.report_generator import analyze_risk, calculate_summary_stats, plot_backtest_analysis
 from ..atomic.data_handler import get_simple_signal
 from ..atomic.strategy_pool import create_simple_strategy, create_permanent_strategy
 
@@ -54,9 +54,13 @@ def standard_backtest_pipeline(
         analysis = analyze_risk(report_normal)
         stats = calculate_summary_stats(report_normal["return"])
         
+        # 6. 绘图分析 (L4 原子)
+        plot_backtest_analysis(report_normal)
+        
         return {
             "report": report_normal,
             "positions": positions_normal,
+            "indicators": indicators,
             "analysis": analysis,
             "stats": stats
         }
@@ -102,9 +106,14 @@ def permanent_portfolio_pipeline(
         report_normal, positions_normal = portfolio_metrics[freq]
         analysis = analyze_risk(report_normal)
         stats = calculate_summary_stats(report_normal["return"])
+        
+        # 6. 绘图分析
+        plot_backtest_analysis(report_normal)
+        
         return {
             "report": report_normal,
             "positions": positions_normal,
+            "indicators": indicators,
             "analysis": analysis,
             "stats": stats
         }
