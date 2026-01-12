@@ -37,6 +37,7 @@ def run_strategy_commander(config):
                 rebalance_freq=cfg["strategy"]["kwargs"].get("rebalance_freq", "month"),
                 min_weight=cfg["strategy"]["kwargs"].get("min_weight", 0.15),
                 max_weight=cfg["strategy"]["kwargs"].get("max_weight", 0.35),
+                asset_groups=cfg["strategy"]["kwargs"].get("asset_groups"),
                 provider_uri=cfg.get("provider_uri", "/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data"),
                 benchmark=cfg.get("benchmark", "SH000300"),
                 account=cfg.get("account", 100000000),

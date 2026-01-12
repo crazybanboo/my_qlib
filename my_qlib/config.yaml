@@ -17,6 +17,10 @@ strategy:
     rebalance_freq: "day"
     min_weight: 0.15
     max_weight: 0.35
+    asset_groups:
+      stocks: ["SH513100", "SZ000510"]
+      gold: ["SH518880"]
+      bonds: ["SZ000012"]
     asset_weights:
       # "SH518880": 0.25 # 黄金etf 13年
       # "SZ159513": 0.125 # 纳斯达克100etf大成 23年

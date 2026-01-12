@@ -18,6 +18,7 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
         rebalance_freq: str = "month", 
         min_weight: float = 0.15, 
         max_weight: float = 0.35,
+        asset_groups: Optional[Dict[str, List[str]]] = None,
         **kwargs: Any
     ):
         """
@@ -25,6 +26,7 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
         :param rebalance_freq: 再平衡频率，可选 'day', 'month', 'year'
         :param min_weight: 触发再平衡的最小权重阈值，低于此值则再平衡
         :param max_weight: 触发再平衡的最大权重阈值，高于此值则再平衡
+        :param asset_groups: 资产分组，例如 {'stocks': ['SH513100', 'SZ000510'], 'gold': ['SH518880']}
         """
         # 为基类提供默认信号，防止 create_signal_from(None) 报错
         if "signal" not in kwargs:
@@ -34,6 +36,8 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
         self.rebalance_freq = rebalance_freq
         self.min_weight = min_weight
         self.max_weight = max_weight
+        # 如果未提供分组，则每个资产自成一组
+        self.asset_groups = asset_groups or {asset: [asset] for asset in asset_weights}
         self.last_rebalance_date: Optional[pd.Timestamp] = None
 
     def generate_target_weight_position(
@@ -67,34 +71,28 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
             self.last_rebalance_date = trade_start_time
             return self.asset_weights
 
-        # 3. 检查偏离度逻辑：只有当某个资产超过 max_weight 或低于 min_weight 时才触发
+        # 3. 检查偏离度逻辑：只有当某个分组的总权重超过 max_weight 或低于 min_weight 时才触发
         if current is not None:
             total_value = current.calculate_value()
             if total_value > 0:
                 need_rebalance = False
-                for asset in self.asset_weights:
-                    # 获取当前资产权重
-                    if asset == 'cash':
-                        current_weight = current.get_cash() / total_value
-                    else:
-                        # 检查资产是否在持仓中
-                        if current.check_stock(asset):
+                for group_name, assets in self.asset_groups.items():
+                    group_weight = 0.0
+                    for asset in assets:
+                        if asset == 'cash':
+                            group_weight += current.get_cash() / total_value
+                        elif current.check_stock(asset):
                             amount = current.get_stock_amount(asset)
                             price = current.get_stock_price(asset)
-                            # 如果无法获取价格（停牌等），保守起见跳过该资产的阈值检查
-                            if price is None or price <= 0:
-                                continue
-                            current_weight = (amount * price) / total_value if amount > 0 else 0
-                        else:
-                            # 不在持仓中，权重为 0
-                            current_weight = 0.0
+                            if price and price > 0:
+                                group_weight += (amount * price) / total_value
                     
                     # 触发条件检查
-                    if current_weight > self.max_weight or current_weight < self.min_weight:
+                    if group_weight > self.max_weight or group_weight < self.min_weight:
                         need_rebalance = True
                         break
                 
-                # 如果频率到了但权重没达到偏离阈值，则跳过本次再平衡
+                # 如果所有分组权重都在阈值内，则跳过本次再平衡
                 if not need_rebalance:
                     return None
 
@@ -152,7 +150,8 @@ def create_permanent_strategy(
     asset_weights: Dict[str, float], 
     rebalance_freq: str = "month",
     min_weight: float = 0.15,
-    max_weight: float = 0.35
+    max_weight: float = 0.35,
+    asset_groups: Optional[Dict[str, List[str]]] = None
 ) -> PermanentPortfolioStrategy:
     """
     创建永久投资组合策略原子。
@@ -161,5 +160,6 @@ def create_permanent_strategy(
         asset_weights=asset_weights, 
         rebalance_freq=rebalance_freq,
         min_weight=min_weight,
-        max_weight=max_weight
+        max_weight=max_weight,
+        asset_groups=asset_groups
     )

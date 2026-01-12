@@ -81,6 +81,7 @@ def permanent_portfolio_pipeline(
     rebalance_freq="month",
     min_weight=0.15,
     max_weight=0.35,
+    asset_groups=None,
     provider_uri="/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data",
     benchmark="SH000300",
     account=100000000,
@@ -97,7 +98,8 @@ def permanent_portfolio_pipeline(
         asset_weights=asset_weights, 
         rebalance_freq=rebalance_freq,
         min_weight=min_weight,
-        max_weight=max_weight
+        max_weight=max_weight,
+        asset_groups=asset_groups
     )
 
     # 3. 创建执行器
