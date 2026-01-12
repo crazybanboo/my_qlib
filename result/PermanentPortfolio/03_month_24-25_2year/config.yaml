@@ -1,0 +1,22 @@
+backtest:
+  start_time: "2024-01-01"
+  end_time: "2025-12-31"
+  provider_uri: "/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data"
+  benchmark: "SH510300"
+  account: 1000000
+  exchange_kwargs:
+    limit_threshold: 0.1
+    deal_price: "close"
+    open_cost: 0.0005
+    close_cost: 0.0015
+    min_cost: 5
+
+strategy:
+  class: "PermanentPortfolioStrategy"
+  kwargs:
+    rebalance_freq: "month"
+    asset_weights:
+      "SH518880": 0.25 # 黄金etf 23年
+      "SZ159513": 0.125 # 纳斯达克100etf大成 23年
+      "SZ159338": 0.125 # 中证A500etf 24年
+      "SH511130": 0.25 # 30年国债etf博时 24年
