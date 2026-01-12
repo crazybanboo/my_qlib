@@ -17,8 +17,9 @@ strategy:
     rebalance_freq: "day"
     min_weight: 0.15
     max_weight: 0.35
+    internal_weight_threshold: 0.4
     asset_groups:
-      stocks: ["SH513100", "SZ000510"]
+      stocks: ["SH513100", "SH510300"]
       gold: ["SH518880"]
       bonds: ["SZ000012"]
     asset_weights:
@@ -29,5 +30,5 @@ strategy:
 
       "SH518880": 0.25 # 黄金etf 13年
       "SH513100": 0.125 # NDX纳斯达克100指数 13年
-      "SZ000510": 0.125 # 中证A500指数 00年
+      "SH510300": 0.125 # SZ000510中证A500指数 00年
       "SZ000012": 0.25 # 国债指数 00年

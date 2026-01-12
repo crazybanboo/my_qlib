@@ -19,6 +19,7 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
         min_weight: float = 0.15, 
         max_weight: float = 0.35,
         asset_groups: Optional[Dict[str, List[str]]] = None,
+        internal_weight_threshold: float = 0.1,
         **kwargs: Any
     ):
         """
@@ -27,6 +28,7 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
         :param min_weight: 触发再平衡的最小权重阈值，低于此值则再平衡
         :param max_weight: 触发再平衡的最大权重阈值，高于此值则再平衡
         :param asset_groups: 资产分组，例如 {'stocks': ['SH513100', 'SZ000510'], 'gold': ['SH518880']}
+        :param internal_weight_threshold: 组内资产相对目标权重的偏离阈值（如 0.1 表示 10%）
         """
         # 为基类提供默认信号，防止 create_signal_from(None) 报错
         if "signal" not in kwargs:
@@ -36,6 +38,7 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
         self.rebalance_freq = rebalance_freq
         self.min_weight = min_weight
         self.max_weight = max_weight
+        self.internal_weight_threshold = internal_weight_threshold
         # 如果未提供分组，则每个资产自成一组
         self.asset_groups = asset_groups or {asset: [asset] for asset in asset_weights}
         self.last_rebalance_date: Optional[pd.Timestamp] = None
@@ -71,7 +74,7 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
             self.last_rebalance_date = trade_start_time
             return self.asset_weights
 
-        # 3. 检查偏离度逻辑：只有当某个分组的总权重超过 max_weight 或低于 min_weight 时才触发
+        # 3. 检查偏离度逻辑
         if current is not None:
             total_value = current.calculate_value()
             if total_value > 0:
@@ -79,20 +82,34 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
                 for group_name, assets in self.asset_groups.items():
                     group_weight = 0.0
                     for asset in assets:
+                        curr_asset_weight = 0.0
                         if asset == 'cash':
-                            group_weight += current.get_cash() / total_value
+                            curr_asset_weight = current.get_cash() / total_value
                         elif current.check_stock(asset):
                             amount = current.get_stock_amount(asset)
                             price = current.get_stock_price(asset)
                             if price and price > 0:
-                                group_weight += (amount * price) / total_value
+                                curr_asset_weight = (amount * price) / total_value
+                        
+                        group_weight += curr_asset_weight
+                        
+                        # 检查组内单个资产的偏离度
+                        target_asset_weight = self.asset_weights.get(asset, 0)
+                        if target_asset_weight > 0:
+                            relative_deviation = abs(curr_asset_weight - target_asset_weight) / target_asset_weight
+                            if relative_deviation > self.internal_weight_threshold:
+                                need_rebalance = True
+                                break
                     
-                    # 触发条件检查
+                    if need_rebalance:
+                        break
+                    
+                    # 检查组总权重的触发条件
                     if group_weight > self.max_weight or group_weight < self.min_weight:
                         need_rebalance = True
                         break
                 
-                # 如果所有分组权重都在阈值内，则跳过本次再平衡
+                # 如果所有检查都通过，则跳过本次再平衡
                 if not need_rebalance:
                     return None
 
@@ -151,7 +168,8 @@ def create_permanent_strategy(
     rebalance_freq: str = "month",
     min_weight: float = 0.15,
     max_weight: float = 0.35,
-    asset_groups: Optional[Dict[str, List[str]]] = None
+    asset_groups: Optional[Dict[str, List[str]]] = None,
+    internal_weight_threshold: float = 0.1
 ) -> PermanentPortfolioStrategy:
     """
     创建永久投资组合策略原子。
@@ -161,5 +179,6 @@ def create_permanent_strategy(
         rebalance_freq=rebalance_freq,
         min_weight=min_weight,
         max_weight=max_weight,
-        asset_groups=asset_groups
+        asset_groups=asset_groups,
+        internal_weight_threshold=internal_weight_threshold
     )
