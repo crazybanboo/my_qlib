@@ -55,3 +55,67 @@ def calculate_summary_stats(returns):
         "Max Drawdown": (returns.cumsum().cummax() - returns.cumsum()).max(),
     }
     return stats
+
+def format_positions_df(positions):
+    """
+    将原始持仓数据转换为更易读的 DataFrame。
+    支持 Qlib 的 Position 对象以及普通字典结构。
+    """
+    data = []
+    for date, pos_info in positions.items():
+        # 1. 提取内部持仓对象/字典
+        if isinstance(pos_info, dict):
+            inner_pos = pos_info.get('position', pos_info)
+        else:
+            inner_pos = pos_info
+            
+        # 2. 根据类型提取信息
+        if hasattr(inner_pos, 'get_cash'):
+            # 情况 A: inner_pos 是 Qlib 的 Position 对象
+            cash = inner_pos.get_cash()
+            total_value = inner_pos.calculate_value()
+            hold_str = []
+            try:
+                # 遍历持仓代码
+                for code in inner_pos.get_stock_list():
+                    amount = inner_pos.get_stock_amount(code)
+                    price = inner_pos.get_stock_price(code)
+                    stock_value = amount * price
+                    # 计算权重
+                    weight = stock_value / total_value if total_value != 0 else 0
+                    hold_str.append(f"{code}(数量:{amount:,.0f}, 价值:{stock_value:,.2f}, 权重:{weight:.2%})")
+            except Exception:
+                # 备选方案
+                hold_dict = getattr(inner_pos, 'position', {})
+                hold_str = [str(code) for code in hold_dict if code not in ['cash', 'cash_delay']]
+            holdings_label = " | ".join(hold_str)
+        elif isinstance(inner_pos, dict):
+            # 情况 B: inner_pos 是普通字典
+            cash = inner_pos.get('cash', 0)
+            total_value = inner_pos.get('now_account_value', cash)
+            holdings = {k: v for k, v in inner_pos.items() if k not in ['cash', 'now_account_value', 'cash_delay']}
+            hold_parts = []
+            for code, detail in holdings.items():
+                if isinstance(detail, dict):
+                    amount = detail.get('amount', 0)
+                    price = detail.get('price', 0)
+                    stock_value = amount * price
+                    weight = detail.get('weight', 0)
+                    hold_parts.append(f"{code}(数量:{amount:,.0f}, 价值:{stock_value:,.2f}, 权重:{weight:.2%})")
+                else:
+                    hold_parts.append(str(code))
+            holdings_label = " | ".join(hold_parts)
+        else:
+            cash, total_value, holdings_label = 0, 0, "Unknown"
+
+        data.append({
+            'date': date,
+            'cash': cash,
+            'total_value': total_value,
+            'holdings': holdings_label if holdings_label else "Empty"
+        })
+    
+    df = pd.DataFrame(data)
+    if not df.empty:
+        df.set_index('date', inplace=True)
+    return df
