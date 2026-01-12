@@ -79,6 +79,8 @@ def permanent_portfolio_pipeline(
     end_time,
     asset_weights,
     rebalance_freq="month",
+    min_weight=0.15,
+    max_weight=0.35,
     provider_uri="/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data",
     benchmark="SH000300",
     account=100000000,
@@ -91,7 +93,12 @@ def permanent_portfolio_pipeline(
     init_qlib_env(provider_uri=provider_uri)
 
     # 2. 创建策略 (L4 原子) - 固定权重策略不需要预测信号
-    strategy = create_permanent_strategy(asset_weights=asset_weights, rebalance_freq=rebalance_freq)
+    strategy = create_permanent_strategy(
+        asset_weights=asset_weights, 
+        rebalance_freq=rebalance_freq,
+        min_weight=min_weight,
+        max_weight=max_weight
+    )
 
     # 3. 创建执行器
     executor = create_simulator_executor()

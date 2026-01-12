@@ -14,7 +14,9 @@ backtest:
 strategy:
   class: "PermanentPortfolioStrategy"
   kwargs:
-    rebalance_freq: "month"
+    rebalance_freq: "day"
+    min_weight: 0.15
+    max_weight: 0.35
     asset_weights:
       # "SH518880": 0.25 # 黄金etf 13年
       # "SZ159513": 0.125 # 纳斯达克100etf大成 23年

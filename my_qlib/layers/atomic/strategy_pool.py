@@ -12,10 +12,19 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
     固定权重分配：股票 25%, 长债 25%, 黄金 25%,现金 25%。
     支持月度/年度/每日再平衡。
     """
-    def __init__(self, asset_weights: Dict[str, float], rebalance_freq: str = "month", **kwargs: Any):
+    def __init__(
+        self, 
+        asset_weights: Dict[str, float], 
+        rebalance_freq: str = "month", 
+        min_weight: float = 0.15, 
+        max_weight: float = 0.35,
+        **kwargs: Any
+    ):
         """
         :param asset_weights: 资产权重字典，例如 {'SH518880': 0.25, 'SZ159513': 0.125, ...}
         :param rebalance_freq: 再平衡频率，可选 'day', 'month', 'year'
+        :param min_weight: 触发再平衡的最小权重阈值，低于此值则再平衡
+        :param max_weight: 触发再平衡的最大权重阈值，高于此值则再平衡
         """
         # 为基类提供默认信号，防止 create_signal_from(None) 报错
         if "signal" not in kwargs:
@@ -23,34 +32,74 @@ class PermanentPortfolioStrategy(WeightStrategyBase):
         super().__init__(**kwargs)
         self.asset_weights = asset_weights
         self.rebalance_freq = rebalance_freq
+        self.min_weight = min_weight
+        self.max_weight = max_weight
         self.last_rebalance_date: Optional[pd.Timestamp] = None
 
     def generate_target_weight_position(
         self, 
         trade_start_time: pd.Timestamp, 
+        current: Optional[Position] = None,
         **kwargs: Any
     ) -> Optional[Dict[str, float]]:
         """
         生成目标权重持仓。
         :param trade_start_time: 当前交易步骤的时间
-        :param kwargs: 包含 score, current, trade_end_time 等冗余参数
+        :param current: 当前持仓对象
+        :param kwargs: 包含 score, trade_end_time 等冗余参数
         """
-        # 判断是否需要再平衡
-        need_rebalance = False
+        # 1. 判断是否到达再平衡检查时间点（由频率决定）
+        is_rebalance_time = False
         if self.rebalance_freq == "day":
-            need_rebalance = True
+            is_rebalance_time = True
         elif self.rebalance_freq == "month":
             if self.last_rebalance_date is None or trade_start_time.month != self.last_rebalance_date.month:
-                need_rebalance = True
+                is_rebalance_time = True
         elif self.rebalance_freq == "year":
             if self.last_rebalance_date is None or trade_start_time.year != self.last_rebalance_date.year:
-                need_rebalance = True
+                is_rebalance_time = True
         
-        if need_rebalance:
+        if not is_rebalance_time:
+            return None
+
+        # 2. 如果是第一次运行，必须执行初始权重分配
+        if self.last_rebalance_date is None:
             self.last_rebalance_date = trade_start_time
             return self.asset_weights
-        
-        return None # 返回 None 表示本周期不调整权重
+
+        # 3. 检查偏离度逻辑：只有当某个资产超过 max_weight 或低于 min_weight 时才触发
+        if current is not None:
+            total_value = current.calculate_value()
+            if total_value > 0:
+                need_rebalance = False
+                for asset in self.asset_weights:
+                    # 获取当前资产权重
+                    if asset == 'cash':
+                        current_weight = current.get_cash() / total_value
+                    else:
+                        # 检查资产是否在持仓中
+                        if current.check_stock(asset):
+                            amount = current.get_stock_amount(asset)
+                            price = current.get_stock_price(asset)
+                            # 如果无法获取价格（停牌等），保守起见跳过该资产的阈值检查
+                            if price is None or price <= 0:
+                                continue
+                            current_weight = (amount * price) / total_value if amount > 0 else 0
+                        else:
+                            # 不在持仓中，权重为 0
+                            current_weight = 0.0
+                    
+                    # 触发条件检查
+                    if current_weight > self.max_weight or current_weight < self.min_weight:
+                        need_rebalance = True
+                        break
+                
+                # 如果频率到了但权重没达到偏离阈值，则跳过本次再平衡
+                if not need_rebalance:
+                    return None
+
+        self.last_rebalance_date = trade_start_time
+        return self.asset_weights
 
     def generate_trade_decision(self, execute_result: Any = None) -> TradeDecisionWO:
         """
@@ -99,8 +148,18 @@ def create_simple_strategy(signal: Any, topk: int = 50, n_drop: int = 5) -> Topk
     """
     return TopkDropoutStrategy(signal=signal, topk=topk, n_drop=n_drop)
 
-def create_permanent_strategy(asset_weights: Dict[str, float], rebalance_freq: str = "month") -> PermanentPortfolioStrategy:
+def create_permanent_strategy(
+    asset_weights: Dict[str, float], 
+    rebalance_freq: str = "month",
+    min_weight: float = 0.15,
+    max_weight: float = 0.35
+) -> PermanentPortfolioStrategy:
     """
     创建永久投资组合策略原子。
     """
-    return PermanentPortfolioStrategy(asset_weights=asset_weights, rebalance_freq=rebalance_freq)
+    return PermanentPortfolioStrategy(
+        asset_weights=asset_weights, 
+        rebalance_freq=rebalance_freq,
+        min_weight=min_weight,
+        max_weight=max_weight
+    )
