@@ -3,6 +3,8 @@ import numpy as np
 from qlib.contrib.evaluate import risk_analysis
 from qlib.contrib.report import analysis_position
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+from qlib.data import D
 
 def analyze_risk(report_normal):
     """
@@ -10,7 +12,51 @@ def analyze_risk(report_normal):
     """
     return risk_analysis(report_normal["return"])
 
-def plot_backtest_analysis(report_normal, show_plot=False, save_path="."):
+def plot_instruments_price(instruments, start_time, end_time, save_path="."):
+    """
+    绘制各个标的价格走势图的原子函数 (交互式 HTML 版本)
+    """
+    # 1. 获取标的价格数据 (使用 $close)
+    df = D.features(instruments, ["$close"], start_time=start_time, end_time=end_time)
+    
+    if df.empty:
+        print("警告: 未找到任何标的价格数据，跳过绘图。")
+        return
+    
+    # 2. 遍历每个标的进行绘图
+    for instrument in instruments:
+        try:
+            # 提取单个标的的数据
+            data = df.xs(instrument, level='instrument')
+            
+            if data.empty:
+                continue
+                
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=data.index, 
+                y=data['$close'],
+                mode='lines',
+                name=f'{instrument} Close'
+            ))
+            
+            fig.update_layout(
+                title=f'标的价格走势图: {instrument}',
+                xaxis_title='日期',
+                yaxis_title='价格',
+                template='plotly_white',
+                hovermode='x unified'
+            )
+            
+            # 保存为 HTML
+            html_path = f"{save_path}/price_{instrument}.html"
+            fig.write_html(html_path)
+            print(f"已保存标的价格图到: {html_path}")
+            
+        except Exception as e:
+            print(f"绘制标的 {instrument} 时出错: {e}")
+
+def plot_backtest_analysis(report_normal, instruments=None, start_time=None, end_time=None, show_plot=False, save_path="."):
     """
     持仓分析绘图原子
     """
@@ -41,6 +87,10 @@ def plot_backtest_analysis(report_normal, show_plot=False, save_path="."):
             html_path = f"{save_path}/risk_analysis_graph_{i}.html"
             fig.write_html(html_path)
             print(f"已保存风险分析图表到: {html_path}")
+    
+    # 3. 绘制各个标的价格图 (如果提供)
+    if instruments and start_time and end_time:
+        plot_instruments_price(instruments, start_time, end_time, save_path=save_path)
     
     return figs_report, figs_risk
 

@@ -55,7 +55,14 @@ def standard_backtest_pipeline(
         stats = calculate_summary_stats(report_normal["return"])
         
         # 6. 绘图分析 (L4 原子)
-        plot_backtest_analysis(report_normal)
+        # 获取标的列表 (用于绘制价格图)
+        instruments = list(signal.index.get_level_values('instrument').unique()) if not signal.empty else None
+        plot_backtest_analysis(
+            report_normal, 
+            instruments=instruments, 
+            start_time=start_time, 
+            end_time=end_time
+        )
         
         return {
             "report": report_normal,
@@ -108,7 +115,14 @@ def permanent_portfolio_pipeline(
         stats = calculate_summary_stats(report_normal["return"])
         
         # 6. 绘图分析
-        plot_backtest_analysis(report_normal)
+        # 获取标的列表 (用于绘制价格图)
+        instruments = list(asset_weights.keys())
+        plot_backtest_analysis(
+            report_normal, 
+            instruments=instruments, 
+            start_time=start_time, 
+            end_time=end_time
+        )
         
         return {
             "report": report_normal,
