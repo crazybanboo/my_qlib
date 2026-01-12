@@ -5,4 +5,4 @@ def init_qlib_env(provider_uri: str = "/mnt/data/mycode/my_qlib/.qlib/qlib_data/
     """
     初始化 Qlib 环境
     """
-    qlib.init(provider_uri=provider_uri, region=REG_CN)
+    qlib.init(provider_uri=provider_uri, region=REG_CN) # REG_CN 用于控制 100的整数倍（100手起步）

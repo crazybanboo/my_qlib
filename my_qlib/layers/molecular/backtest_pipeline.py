@@ -2,7 +2,7 @@ from ..atomic.env_init import init_qlib_env
 from ..atomic.backtest_executor import create_simulator_executor, run_backtest
 from ..atomic.report_generator import analyze_risk, calculate_summary_stats
 from ..atomic.data_handler import get_simple_signal
-from ..atomic.strategy_pool import create_simple_strategy
+from ..atomic.strategy_pool import create_simple_strategy, create_permanent_strategy
 
 def standard_backtest_pipeline(
     start_time, 
@@ -10,7 +10,8 @@ def standard_backtest_pipeline(
     strategy_kwargs, 
     provider_uri="/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data",
     benchmark="SH000300",
-    account=100000000
+    account=100000000,
+    exchange_kwargs=None
 ):
     """
     标准回测流水线分子。
@@ -39,7 +40,8 @@ def standard_backtest_pipeline(
         strategy=strategy,
         executor=executor,
         benchmark=benchmark,
-        account=account
+        account=account,
+        exchange_kwargs=exchange_kwargs
     )
     
     # 4. 结果提取 (假设频率为 1day)
@@ -59,4 +61,51 @@ def standard_backtest_pipeline(
             "stats": stats
         }
     
+    return None
+
+def permanent_portfolio_pipeline(
+    start_time,
+    end_time,
+    asset_weights,
+    rebalance_freq="month",
+    provider_uri="/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data",
+    benchmark="SH000300",
+    account=100000000,
+    exchange_kwargs=None
+):
+    """
+    永久投资组合回测流水线分子。
+    """
+    # 1. 环境初始化
+    init_qlib_env(provider_uri=provider_uri)
+
+    # 2. 创建策略 (L4 原子) - 固定权重策略不需要预测信号
+    strategy = create_permanent_strategy(asset_weights=asset_weights, rebalance_freq=rebalance_freq)
+
+    # 3. 创建执行器
+    executor = create_simulator_executor()
+
+    # 4. 运行回测
+    portfolio_metrics, indicators = run_backtest(
+        start_time=start_time,
+        end_time=end_time,
+        strategy=strategy,
+        executor=executor,
+        benchmark=benchmark,
+        account=account,
+        exchange_kwargs=exchange_kwargs
+    )
+
+    # 5. 结果处理
+    freq = "1day"
+    if freq in portfolio_metrics:
+        report_normal, positions_normal = portfolio_metrics[freq]
+        analysis = analyze_risk(report_normal)
+        stats = calculate_summary_stats(report_normal["return"])
+        return {
+            "report": report_normal,
+            "positions": positions_normal,
+            "analysis": analysis,
+            "stats": stats
+        }
     return None

@@ -1,12 +1,23 @@
 backtest:
-  start_time: "2017-01-01"
-  end_time: "2020-08-01"
+  start_time: "2024-01-01"
+  end_time: "2024-12-31"
   provider_uri: "/mnt/data/mycode/my_qlib/.qlib/qlib_data/cn_data"
-  benchmark: "SH000300"
-  account: 100000000
+  benchmark: "SH510300"
+  account: 1000000
+  exchange_kwargs:
+    limit_threshold: 0.1
+    deal_price: "close"
+    open_cost: 0.0005
+    close_cost: 0.0015
+    min_cost: 5
 
 strategy:
-  class: "TopkDropoutStrategy"
+  class: "PermanentPortfolioStrategy"
   kwargs:
-    topk: 50
-    n_drop: 5
+    rebalance_freq: "month"
+    asset_weights:
+      "SH518880": 0.25
+      "SZ159513": 0.125
+      "SZ159338": 0.125
+      "SH511130": 0.25
+      "SH511880": 0.25

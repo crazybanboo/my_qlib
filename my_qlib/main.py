@@ -16,7 +16,6 @@ def main():
     raw_config = load_yaml_config(config_path)
     
     # 2. 准备协调层所需的 config 格式
-    # 将 yaml 中的分层配置平铺或按需转换
     backtest_cfg = raw_config.get("backtest", {})
     strategy_cfg = raw_config.get("strategy", {})
     
@@ -25,12 +24,9 @@ def main():
         "end_time": backtest_cfg.get("end_time"),
         "provider_uri": backtest_cfg.get("provider_uri"),
         "benchmark": backtest_cfg.get("benchmark", "SH000300"),
-        "account": backtest_cfg.get("account", 100000000),
-        # 传递参数而不是对象，由 L3 管道负责创建
-        "strategy_kwargs": {
-            "topk": strategy_cfg.get("kwargs", {}).get("topk", 50),
-            "n_drop": strategy_cfg.get("kwargs", {}).get("n_drop", 5)
-        }
+        "account": backtest_cfg.get("account", 1000000),
+        "exchange_kwargs": backtest_cfg.get("exchange_kwargs"),
+        "strategy": strategy_cfg
     }
 
     try:
